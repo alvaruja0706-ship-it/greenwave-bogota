@@ -10,15 +10,73 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🚦 GreenWave: Sistema Inteligente de Gestión de Tráfico y Semaforización")
+# Estilos CSS y HTML personalizados para un diseño de nivel profesional
 st.markdown("""
-*Plataforma de control adaptativo para mitigar la congestión vehicular (carros, motos y SITP) en las principales vías de Bogotá D.C.*
-""")
+<style>
+    .main-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #ffffff;
+        text-align: center;
+        margin-bottom: 0px;
+    }
+    .subtitle {
+        font-size: 1.1rem;
+        color: #a0aec0;
+        text-align: center;
+        margin-bottom: 25px;
+    }
+    .card-container {
+        background: linear-gradient(135deg, #1e1e2f 0%, #2a2a40 100%);
+        border: 1px solid #4a4a6a;
+        border-radius: 14px;
+        padding: 20px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        margin-bottom: 20px;
+        color: #ffffff;
+    }
+    .badge-critical {
+        background-color: #ff3b30;
+        color: white;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    .badge-moderate {
+        background-color: #ffcc00;
+        color: #1a1a1a;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    .badge-fluid {
+        background-color: #34c759;
+        color: white;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    .metric-box {
+        background: #161622;
+        border-left: 5px solid #00d2ff;
+        padding: 12px;
+        border-radius: 8px;
+        margin: 8px 0;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# Creamos un fragmento que se actualiza automáticamente cada 3 segundos
+# Título con HTML
+st.markdown('<p class="main-title">🚦 GreenWave: Sistema Inteligente de Gestión de Tráfico</p>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Plataforma adaptativa de control semafórico para optimizar el flujo de vehículos particulares, motocicletas y buses del SITP en Bogotá D.C.</p>', unsafe_allow_html=True)
+
+# Fragmento en tiempo real (actualización cada 3 segundos)
 @st.fragment(run_every=3)
 def mostrar_panel_en_vivo():
-    # Red de intersecciones críticas reales en Bogotá (WGS84 / EPSG:4326)
+    # Intersecciones críticas reales de Bogotá
     INTERSECCIONES_BOGOTA = [
         {"id": 1, "nombre": "Calle 26 con Av. Caracas", "corredor": "Troncal Eje Ambiental / Caracas", "lat": 4.6097, "lon": -74.0817},
         {"id": 2, "nombre": "Calle 45 con NQS", "corredor": "Troncal NQS", "lat": 4.6280, "lon": -74.0650},
@@ -34,32 +92,33 @@ def mostrar_panel_en_vivo():
         {"id": 12, "nombre": "Autopista Sur con Bosa", "corredor": "Troncal Autopista Sur", "lat": 4.5800, "lon": -74.1800}
     ]
 
-    # Simulación coherente del tráfico mixto en tiempo real
+    # Simulación estocástica coherente
     red_actualizada = []
     for nodo in INTERSECCIONES_BOGOTA:
-        # Generación estocástica coherente de vehículos
         carros = random.randint(110, 310)
         motos = random.randint(80, 240)
         buses_sitp = random.randint(10, 38)
         
-        # Cálculo de carga total ponderada para el tráfico
         carga_total = carros + (motos * 0.7) + (buses_sitp * 1.5)
         
         if carga_total > 320:
-            estado_trafico = "🔴 Trancón Crítico (Saturado)"
+            estado_trafico = "Trancón Crítico (Saturado)"
+            badge_html = '<span class="badge-critical">🔴 Saturado</span>'
             tiempo_verde = 65
             accion_sistema = "Ciclo Extendido (Prioridad de Evacuación)"
-            color_halo = [255, 59, 48, 220]     # Rojo intenso
+            color_nodo = [255, 59, 48, 240]
         elif carga_total > 210:
-            estado_trafico = "🟡 Tráfico Moderado"
+            estado_trafico = "Tráfico Moderado"
+            badge_html = '<span class="badge-moderate">🟡 Moderado</span>'
             tiempo_verde = 45
             accion_sistema = "Ciclo Dinámico Ajustado"
-            color_halo = [255, 204, 0, 220]     # Amarillo
+            color_nodo = [255, 204, 0, 240]
         else:
-            estado_trafico = "🟢 Flujo Fluido"
+            estado_trafico = "Flujo Fluido"
+            badge_html = '<span class="badge-fluid">🟢 Fluido</span>'
             tiempo_verde = 30
             accion_sistema = "Ciclo Estándar Sincronizado"
-            color_halo = [52, 199, 89, 220]     # Verde
+            color_nodo = [52, 199, 89, 240]
             
         red_actualizada.append({
             "id": nodo["id"],
@@ -71,10 +130,10 @@ def mostrar_panel_en_vivo():
             "motos": motos,
             "buses": buses_sitp,
             "estado_trafico": estado_trafico,
+            "badge_html": badge_html,
             "tiempo_verde": tiempo_verde,
             "accion_sistema": accion_sistema,
-            "icono": "🚦",
-            "color_halo": color_halo
+            "color": color_nodo
         })
 
     df_nodos = pd.DataFrame(red_actualizada)
@@ -82,105 +141,86 @@ def mostrar_panel_en_vivo():
     # --- MÉTRICAS SUPERIORES ---
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric(label="📍 Nodos Semafóricos", value=len(df_nodos), delta="Bogotá D.C.")
+        st.metric(label="📍 Nodos Activos", value=len(df_nodos), delta="Bogotá D.C.")
     with col2:
         promedio_total = int((df_nodos['carros'] + df_nodos['motos'] + df_nodos['buses']).mean())
-        st.metric(label="🚗 Parque Automotor Promedio", value=f"{promedio_total} un.", delta="Carros, Motos y Buses")
+        st.metric(label="🚗 Parque Automotor", value=f"{promedio_total} un.", delta="Promedio por vía")
     with col3:
         nodos_criticos = len(df_nodos[df_nodos['tiempo_verde'] == 65])
-        st.metric(label="🚨 Nodos Mitigando Trancón", value=f"{nodos_criticos} activos", delta="Adaptativos")
+        st.metric(label="🚨 Mitigando Trancón", value=f"{nodos_criticos} activos", delta="Prioridad alta")
     with col4:
-        st.metric(label="⚡ Sistema Inteligente", value="Operativo", delta="Actualización en Vivo")
+        st.metric(label="⚡ Algoritmo Adaptativo", value="En Línea", delta="Tiempo Real (3s)")
 
     st.markdown("---")
 
-    # --- MAPA Y PANEL LATERAL ---
-    col_mapa, col_panel = st.columns([2, 1])
+    # --- MAPA Y PANEL LATERAL CON HTML ---
+    col_mapa, col_panel = st.columns([1.6, 1])
     
     with col_mapa:
-        st.subheader("🗺️ Mapa Interactivo: Red de Semáforos Inteligentes")
-        st.markdown("*(Pasa el cursor sobre cualquier **🚦** para ver el reporte detallado del tráfico)*")
+        st.subheader("🗺️ Mapa Geoespacial de la Red")
+        st.markdown("<p style='color: #a0aec0; font-size: 0.9rem;'>Los puntos reflejan el estado del semáforo en tiempo real. Pasa el cursor o selecciona la intersección en el panel derecho.</p>", unsafe_allow_html=True)
 
-        # Capa 1: Halo circular de fondo (indica el estado de saturación del semáforo)
-        layer_halo = pdk.Layer(
+        # Capa PyDeck con anillos brillantes
+        layer = pdk.Layer(
             'ScatterplotLayer',
             df_nodos,
             get_position='[lon, lat]',
-            get_color='color_halo',
-            get_radius=280,
+            get_color='color',
+            get_radius=320,
             pickable=True,
             auto_highlight=True,
-        )
-
-        # Capa 2: Íconos de semáforo reales (emojis 🚦) en cada intersección
-        layer_iconos = pdk.Layer(
-            'TextLayer',
-            df_nodos,
-            get_position='[lon, lat]',
-            get_text='icono',
-            get_size=24,
-            get_color=[255, 255, 255, 255],
-            pickable=True,
+            stroked=True,
+            get_line_color=[255, 255, 255, 255],
+            get_line_width=40,
         )
 
         view_state = pdk.ViewState(
             latitude=4.6350,
             longitude=-74.0650,
             zoom=11.2,
-            pitch=35,
+            pitch=30,
         )
 
         r = pdk.Deck(
-            layers=[layer_halo, layer_iconos],
+            layers=[layer],
             initial_view_state=view_state,
             tooltip={
-                "html": "<b>Intersección:</b> {interseccion}<br/>"
-                        "<b>Corredor Vial:</b> {corredor}<br/>"
-                        "----------------------------------<br/>"
-                        "🚗 <b>Carros Particulares:</b> {carros} un.<br/>"
-                        "🏍️ <b>Motocicletas:</b> {motos} un.<br/>"
-                        "🚌 <b>Buses SITP:</b> {buses} un.<br/>"
-                        "----------------------------------<br/>"
-                        "📊 <b>Estado de la Vía:</b> {estado_trafico}<br/>"
-                        "⚙️ <b>Acción del Semáforo:</b> {accion_sistema}<br/>"
-                        "⏱️ <b>Ciclo Verde Asignado:</b> {tiempo_verde} segundos",
-                "style": {
-                    "backgroundColor": "#181818",
-                    "color": "#ffffff",
-                    "font-family": "sans-serif",
-                    "padding": "14px",
-                    "border-radius": "8px",
-                    "border": "1px solid #444"
-                }
+                "text": "Intersección: {interseccion}\nCorredor: {corredor}\nCarros: {carros} | Motos: {motos} | Buses: {buses}\nEstado: {estado_trafico}\nVerde Asignado: {tiempo_verde}s"
             }
         )
         st.pydeck_chart(r)
 
     with col_panel:
-        st.subheader("🔍 Inspector de Semáforos en Vivo")
+        st.subheader("🔍 Inspector Detallado de Semáforo")
         
-        # Selector para consultar al detalle cualquier intersección
         nodos_lista = df_nodos['interseccion'].tolist()
         nodo_elegido = st.selectbox("Seleccione un semáforo de la red:", nodos_lista)
         
         datos_nodo = df_nodos[df_nodos['interseccion'] == nodo_elegido].iloc[0]
         
+        # Tarjeta HTML personalizada súper limpia y profesional
         st.markdown(f"""
-        ### 🚦 {datos_nodo['interseccion']}
-        * **Corredor:** {datos_nodo['corredor']}
-        * **Estado del Tráfico:** {datos_nodo['estado_trafico']}
-        
-        ---
-        **Conteo Aproximado en Tiempo Real:**
-        * 🚗 **Carros:** `{datos_nodo['carros']}` vehículos
-        * 🏍️ **Motos:** `{datos_nodo['motos']}` motocicletas
-        * 🚌 **Buses SITP:** `{datos_nodo['buses']}` unidades
-        
-        ---
-        **Respuesta del Sistema Adaptativo:**
-        * ⚙️ **Acción:** {datos_nodo['accion_sistema']}
-        * ⏱️ **Tiempo Verde:** **{datos_nodo['tiempo_verde']} segundos**
-        """)
+        <div class="card-container">
+            <h3 style="margin-top: 0; color: #00d2ff; font-size: 1.25rem;">🚦 {datos_nodo['interseccion']}</h3>
+            <p style="color: #cbd5e0; margin-bottom: 8px;"><b>Corredor Vial:</b> {datos_nodo['corredor']}</p>
+            <div style="margin: 12px 0;"><b>Estado del Tráfico:</b> {datos_nodo['badge_html']}</div>
+            
+            <hr style="border-color: #4a4a6a; margin: 12px 0;">
+            
+            <p style="margin-bottom: 6px; font-weight: bold; color: #e2e8f0;">Conteo Vehicular en Tiempo Real:</p>
+            <div class="metric-box">
+                🚗 <b>Carros Particulares:</b> <code>{datos_nodo['carros']}</code> unidades<br>
+                🏍️ <b>Motocicletas:</b> <code>{datos_nodo['motos']}</code> unidades<br>
+                🚌 <b>Buses SITP:</b> <code>{datos_nodo['buses']}</code> unidades
+            </div>
+            
+            <p style="margin-top: 12px; margin-bottom: 6px; font-weight: bold; color: #e2e8f0;">Respuesta del Sistema Inteligente:</p>
+            <div style="background: #161622; padding: 10px; border-radius: 8px; border-left: 5px solid #ffcc00;">
+                ⚙️ <b>Acción:</b> {datos_nodo['accion_sistema']}<br>
+                ⏱️ <b>Tiempo de Verde:</b> <span style="color: #00d2ff; font-size: 1.1rem; font-weight: bold;">{datos_nodo['tiempo_verde']} segundos</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 # Ejecutamos la aplicación
 mostrar_panel_en_vivo()
