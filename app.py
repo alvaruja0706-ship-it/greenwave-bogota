@@ -10,9 +10,9 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🚦 GreenWave: Sistema Inteligente de Red Semafórica y SITP")
+st.title("🚦 GreenWave: Sistema Inteligente de Gestión de Tráfico y Semaforización")
 st.markdown("""
-*Plataforma de gestión de tráfico urbano en tiempo real basada en modelado espacial y semaforización adaptativa.*
+*Plataforma de control de tráfico urbano para mitigar la congestión vehicular (carros, motos y SITP) en Bogotá D.C mediante semaforización adaptativa.*
 """)
 
 # Creamos un fragmento que se actualiza automáticamente cada 3 segundos
@@ -34,20 +34,31 @@ def mostrar_panel_en_vivo():
         {"id": 12, "nombre": "Autopista Sur con Bosa", "lat": 4.5800, "lon": -74.1800, "corredor": "Troncal Autopista Sur"}
     ]
 
-    # Generar datos dinámicos simulando telemetría en vivo
+    # Simulación de telemetría de tráfico mixto (Carros, Motos y Buses)
     red_actualizada = []
     for nodo in INTERSECCIONES_BOGOTA:
-        pasajeros_bus = random.randint(25, 90)
-        densidad = random.choice(["Fluida", "Moderada", "Saturada / Hora Pico"])
+        carros = random.randint(120, 350)
+        motos = random.randint(80, 280)
+        buses_sitp = random.randint(15, 45)
         
-        if pasajeros_bus > 60 or densidad == "Saturada / Hora Pico":
-            tiempo_verde = 60
-            estado = "Prioridad SITP Activa"
-            tipo_color = "verde"
+        # Nivel de saturación total del nodo
+        carga_total = carros + (motos * 0.7) + (buses_sitp * 1.5)
+        
+        if carga_total > 350:
+            estado_trafico = "Trancón Crítico (Saturado)"
+            tiempo_verde = 65
+            estado_semaforo = "Ciclo Extendido por Saturación"
+            tipo_color = "verde" # Verde prioritario para evacuar la vía
+        elif carga_total > 250:
+            estado_trafico = "Tráfico Moderado"
+            tiempo_verde = 45
+            estado_semaforo = "Ciclo Dinámico Ajustado"
+            tipo_color = "amarillo"
         else:
+            estado_trafico = "Flujo Fluido"
             tiempo_verde = 30
-            estado = "Ciclo Normal"
-            tipo_color = "rojo"
+            estado_semaforo = "Ciclo Normal Sincronizado"
+            tipo_color = "rojo" # Ciclo estándar
             
         red_actualizada.append({
             "id": nodo["id"],
@@ -55,43 +66,49 @@ def mostrar_panel_en_vivo():
             "corredor": nodo["corredor"],
             "lat": nodo["lat"],
             "lon": nodo["lon"],
-            "pasajeros_bus": pasajeros_bus,
-            "densidad_trafico": densidad,
+            "carros": carros,
+            "motos": motos,
+            "buses": buses_sitp,
+            "estado_trafico": estado_trafico,
             "tiempo_verde_asignado": tiempo_verde,
-            "estado_semaforo": estado,
+            "estado_semaforo": estado_semaforo,
             "tipo_color": tipo_color
         })
 
     df_nodos = pd.DataFrame(red_actualizada)
 
-    # Asignar colores y radios para el mapa
-    df_nodos['color'] = df_nodos['tipo_color'].apply(
-        lambda x: [0, 255, 128, 200] if x == 'verde' else [255, 75, 75, 180]
-    )
-    df_nodos['radio'] = df_nodos['tipo_color'].apply(
-        lambda x: 220 if x == 'verde' else 140
-    )
+    # Asignar colores profesionales en el mapa según el estado del semáforo/tráfico
+    def asignar_color(tipo):
+        if tipo == 'verde':
+            return [0, 220, 100, 210]     # Verde (Prioridad/Evacuación)
+        elif tipo == 'amarillo':
+            return [255, 180, 0, 210]   # Amarillo (Precaución/Moderado)
+        else:
+            return [235, 60, 60, 200]     # Rojo (Normal/Estándar)
 
-    # --- PANEL DE MÉTRICAS ---
+    df_nodos['color'] = df_nodos['tipo_color'].apply(asignar_color)
+    df_nodos['radio'] = df_nodos['tipo_color'].apply(lambda x: 240 if x == 'verde' else (180 if x == 'amarillo' else 140))
+
+    # --- PANEL DE MÉTRICAS GLOBALES ---
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric(label="📍 Nodos Monitoreados", value=len(df_nodos), delta="Bogotá D.C.")
+        st.metric(label="📍 Nodos Semafóricos", value=len(df_nodos), delta="Red Urbana Bogotá")
     with col2:
-        promedio_pasajeros = int(df_nodos['pasajeros_bus'].mean())
-        st.metric(label="🚌 Ocupación Promedio SITP", value=f"{promedio_pasajeros} pas.", delta="En tiempo real")
+        total_vehiculos = int((df_nodos['carros'] + df_nodos['motos'] + df_nodos['buses']).mean())
+        st.metric(label="🚗 Flujo Promedio de Vehículos", value=f"{total_vehiculos} un.", delta="Carros, Motos y Buses")
     with col3:
         nodos_prioridad = len(df_nodos[df_nodos['tipo_color'] == 'verde'])
-        st.metric(label="🚦 Semáforos en Prioridad", value=f"{nodos_prioridad} activos", delta="Adaptativos")
+        st.metric(label="🚦 Semáforos en Modo Alivio", value=f"{nodos_prioridad} activos", delta="Mitigando Trancón")
     with col4:
-        st.metric(label="🔄 Estado del Sistema", value="Operativo", delta="Sincronizado")
+        st.metric(label="⚡ Sistema Adaptativo", value="Operativo", delta="En Tiempo Real")
 
     st.markdown("---")
 
-    # --- MAPA INTERACTIVO Y TABLA ---
+    # --- MAPA INTERACTIVO Y TABLA DE ESTADO ---
     col_mapa, col_info = st.columns([2, 1])
     
     with col_mapa:
-        st.subheader("🗺️ Mapa Interactivo de Tráfico en Vivo")
+        st.subheader("🗺️ Mapa Interactivo de la Red Semafórica y Tráfico Mixto")
         
         layer = pdk.Layer(
             'ScatterplotLayer',
@@ -107,30 +124,30 @@ def mostrar_panel_en_vivo():
             latitude=4.6350,
             longitude=-74.0650,
             zoom=11.2,
-            pitch=30,
+            pitch=35,
         )
 
         r = pdk.Deck(
             layers=[layer],
             initial_view_state=view_state,
             tooltip={
-                "text": "Intersección: {interseccion}\nCorredor: {corredor}\nPasajeros Bus: {pasajeros_bus}\nEstado: {estado_semaforo}\nVerde Asignado: {tiempo_verde_asignado} seg"
+                "text": "Intersección: {interseccion}\nCorredor: {corredor}\nCarros: {carros} | Motos: {motos} | Buses: {buses}\nEstado Vía: {estado_trafico}\nAcción Semáforo: {estado_semaforo}\nTiempo Verde: {tiempo_verde_asignado}s"
             }
         )
         st.pydeck_chart(r)
 
     with col_info:
-        st.subheader("📊 Estado de Nodos")
-        resumen_tabla = df_nodos[['interseccion', 'tiempo_verde_asignado', 'densidad_trafico']]
-        resumen_tabla.columns = ['Intersección', 'Verde (s)', 'Densidad']
+        st.subheader("📊 Monitoreo de Nodos")
+        resumen_tabla = df_nodos[['interseccion', 'tiempo_verde_asignado', 'estado_trafico']]
+        resumen_tabla.columns = ['Intersección', 'Verde(s)', 'Estado del Tráfico']
         st.dataframe(resumen_tabla, hide_index=True, use_container_width=True)
 
 # Ejecutamos el panel dinámico
 mostrar_panel_en_vivo()
 
-# --- PANEL INFORMATIVO LIMPIO ---
-with st.expander("📌 Panel de Control y Resumen Técnico"):
+# --- PANEL DE CONTROL TÉCNICO ---
+with st.expander("📌 Resumen del Problema y Solución Propuesta"):
     st.markdown("""
-    * **Módulo Geespacial:** Visualización de nodos estratégicos distribuidos por las principales troncales de Bogotá.
-    * **Automatización:** Reglas de control dinámico que recalculan los tiempos de verde según la saturación de pasajeros en los buses del SITP.
+    * **Problemática:** La congestión vehicular en Bogotá generada por el alto volumen simultáneo de vehículos particulares (carros), motocicletas y flotas de transporte público (SITP), agravada por una deficiente sincronización estática de los semáforos tradicionales.
+    * **Solución (GreenWave):** Un sistema de semaforización adaptativa que analiza la densidad del tráfico mixto en tiempo real y reconfigura los ciclos de verde de forma inteligente para evitar trancones y mejorar la fluidez vial.
     """)
